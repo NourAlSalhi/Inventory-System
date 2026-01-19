@@ -6,13 +6,13 @@ const PORT = 3000;
 const startServer = async () => {
   try {
     await sequelize.authenticate();
-    console.log("✅ Database connected");
+    console.log("Database connected");
 
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
+      console.log(`Server running on http://localhost:${PORT}`);
     });
   } catch (error) {
-    console.error("❌ Unable to connect to DB:", error);
+    console.error("Unable to connect to DB:", error);
   }
 };
 
