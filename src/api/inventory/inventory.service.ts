@@ -14,15 +14,16 @@ export const getInventoryByLocation = async (locationId: number) => {
     attributes: ["quantity", "product_id"],
   });
 
-  return inventory.map((item: any) => {
-    return item;
-  });
   // return inventory.map((item: any) => ({
   //   product_id: item.product_id,
   //   product_name: item.Product?.name,
   //   sku: item.Product?.sku,
   //   quantity: item.quantity,
   // }));
+
+  return inventory.map((item: any) => ({
+    item,
+  }));
 };
 
 export const getProducts = () => {
@@ -44,7 +45,6 @@ export const transferStock = async (payload: {
   to_location_id: number;
   quantity: number;
 }) => {
-
   const { product_id, from_location_id, to_location_id, quantity } = payload;
 
   if (from_location_id === to_location_id) {
@@ -54,6 +54,7 @@ export const transferStock = async (payload: {
   const t = await sequelize.transaction();
 
   try {
+    /* 1️⃣ Load locations */
     const fromLocation = await Location.findByPk(from_location_id, {
       transaction: t,
     });
@@ -65,6 +66,7 @@ export const transferStock = async (payload: {
       throw new Error("Invalid location");
     }
 
+    /* 2️⃣ Check source inventory (per product) */
     const sourceInventory = await Inventory.findOne({
       where: { product_id, location_id: from_location_id },
       transaction: t,
@@ -75,17 +77,30 @@ export const transferStock = async (payload: {
       throw new Error("Not enough stock");
     }
 
+    /* 3️⃣ Load target inventory (per product) */
+    const targetInventory = await Inventory.findOne({
+      where: { product_id, location_id: to_location_id },
+      transaction: t,
+      lock: t.LOCK.UPDATE,
+    });
+
+    const targetProductQuantity = (targetInventory?.quantity || 0) + quantity;
+
+    /* 4️⃣ Check location capacity (AFTER product validation) */
     if (toLocation.type === "store") {
-      const total = await Inventory.sum("quantity", {
+      const totalQuantity = await Inventory.sum("quantity", {
         where: { location_id: to_location_id },
         transaction: t,
       });
 
-      if (total + quantity > (toLocation.max_capacity || 50)) {
+      const safeTotal = totalQuantity || 0;
+
+      if (safeTotal + quantity > (toLocation.max_capacity || 50)) {
         throw new Error("Store capacity exceeded");
       }
     }
 
+    /* 5️⃣ Create transfer record (pending) */
     const transfer = await Transfer.create(
       {
         transfer_ref: `TR-${Date.now()}`,
@@ -98,25 +113,26 @@ export const transferStock = async (payload: {
       { transaction: t }
     );
 
+    /* 6️⃣ Update source inventory */
     sourceInventory.quantity -= quantity;
     await sourceInventory.save({ transaction: t });
 
-    const targetInventory = await Inventory.findOne({
-      where: { product_id, location_id: to_location_id },
-      transaction: t,
-      lock: t.LOCK.UPDATE,
-    });
-
+    /* 7️⃣ Update target inventory */
     if (targetInventory) {
-      targetInventory.quantity += quantity;
+      targetInventory.quantity = targetProductQuantity;
       await targetInventory.save({ transaction: t });
     } else {
       await Inventory.create(
-        { product_id, location_id: to_location_id, quantity },
+        {
+          product_id,
+          location_id: to_location_id,
+          quantity,
+        },
         { transaction: t }
       );
     }
 
+    /* 8️⃣ Complete transfer */
     transfer.status = "completed";
     transfer.completed_at = new Date();
     await transfer.save({ transaction: t });
