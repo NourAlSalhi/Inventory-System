@@ -34,8 +34,20 @@ cd (project_name)
 npm i
 ```
 
+## Create a .env file
+
+```bash
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=Inventory
+
+```
+
 ## Run the Project
 
 ```bash
 npm run dev
 ```
+
