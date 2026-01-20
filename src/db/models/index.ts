@@ -5,7 +5,7 @@ import Transfer from './transfer.model';
 
 // Inventory Associations
 Product.hasMany(Inventory, { foreignKey: 'product_id' });
-Inventory.belongsTo(Product, { foreignKey: 'product_id' });
+Inventory.belongsTo(Product, { foreignKey: 'product_id', as: 'Product' });
 
 Location.hasMany(Inventory, { foreignKey: 'location_id' });
 Inventory.belongsTo(Location, { foreignKey: 'location_id' });
