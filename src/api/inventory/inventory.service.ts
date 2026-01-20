@@ -4,31 +4,32 @@ import sequelize from "../../config/database";
 export const getInventoryByLocation = async (locationId: number) => {
   const inventory = await Inventory.findAll({
     where: { location_id: locationId },
-    include: [{ 
-      model: Product, 
-      as: 'Product',
-      attributes: ["id", "name", "sku"] 
-    }],
+    include: [
+      {
+        model: Product,
+        as: "Product",
+        attributes: ["id", "name", "sku"],
+      },
+    ],
     attributes: ["quantity", "product_id"],
   });
 
   return inventory.map((item: any) => {
-    const productData = item.Product; 
-    
-    return {
-      product_id: item.product_id,
-      product_name: productData?.name || "Unknown",
-      sku: productData?.sku || "Unknown",
-      quantity: item.quantity,
-    };
+    return item;
   });
+  // return inventory.map((item: any) => ({
+  //   product_id: item.product_id,
+  //   product_name: item.Product?.name,
+  //   sku: item.Product?.sku,
+  //   quantity: item.quantity,
+  // }));
 };
 
 export const getProducts = () => {
   return Product.findAll({
     attributes: ["id", "name", "sku"],
   });
-}
+};
 
 export const getLocations = async (type?: string) => {
   return Location.findAll({
@@ -43,6 +44,7 @@ export const transferStock = async (payload: {
   to_location_id: number;
   quantity: number;
 }) => {
+
   const { product_id, from_location_id, to_location_id, quantity } = payload;
 
   if (from_location_id === to_location_id) {
@@ -52,8 +54,12 @@ export const transferStock = async (payload: {
   const t = await sequelize.transaction();
 
   try {
-    const fromLocation = await Location.findByPk(from_location_id, { transaction: t });
-    const toLocation = await Location.findByPk(to_location_id, { transaction: t });
+    const fromLocation = await Location.findByPk(from_location_id, {
+      transaction: t,
+    });
+    const toLocation = await Location.findByPk(to_location_id, {
+      transaction: t,
+    });
 
     if (!fromLocation || !toLocation) {
       throw new Error("Invalid location");
