@@ -53,8 +53,4 @@ Inventory.init(
   }
 );
 
-Inventory.belongsTo(Product, { foreignKey: 'product_id', as: 'Product' });
-Inventory.belongsTo(Location, { foreignKey: 'location_id', as: 'Location' });
-
-
 export default Inventory;
