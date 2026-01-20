@@ -8,7 +8,7 @@ Product.hasMany(Inventory, { foreignKey: 'product_id' });
 Inventory.belongsTo(Product, { foreignKey: 'product_id', as: 'Product' });
 
 Location.hasMany(Inventory, { foreignKey: 'location_id' });
-Inventory.belongsTo(Location, { foreignKey: 'location_id' });
+Inventory.belongsTo(Location, { foreignKey: 'location_id', as: 'Location' });
 
 // Transfer Associations
 Product.hasMany(Transfer, { foreignKey: 'product_id' });
